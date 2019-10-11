@@ -1,97 +1,140 @@
 <template>
   <div id="app">
-	<div class="container">
-		<!-- Top Navigation -->
-		<div class="content">
-			<div class="component">
-				<div class="overlay">
-					<div class="overlay-inner">
-					</div>
-				</div>
-				<img class="resize-image" src="./assets/img/image.jpg" alt="image for resizing">
-				<a class="btn-crop js-crop" href="img/image.jpg">Crop<img class="icon-crop"
-						src="./assets/img/crop.svg"></a>
-			</div>
-		</div><!-- /content -->
-	</div> <!-- /container -->
+	  <div class="container">
+      <div class="columns">
+        <div class="column">
+          hola
+        </div>
+          <div class="column is-one-quarter">
+            <canvas id="canvas" :width=c_width :height=c_height></canvas>
+            <button @click="crop" class="btn-crop js-crop">Crop<img class="icon-crop" src="./assets/img/crop.svg"></button>
+            <input @change="uploadImage" class="btn-primary  btn-upload js-crop" type="file" id="fileUpload2" accept="image/*" />
+          </div>
+        <div class="column">
+          ke ases
+        </div>
+      </div>
+		</div>
   </div>
 </template>
 
 <script>
+import { fabric } from 'fabric'
+import { setTimeout } from 'timers';
 export default {
   name: 'app',
   data () {
     return {
-      event_state : {},
-      constrain : false,
-      min_width : null, // Change as required
-      min_height : null,
-      max_width : null, // Change as required
-      max_height : null,
-      orig_src: null,
-      resize_canvas:null,
+      c_height:500,
+      c_width:900,
+      widthCrop : 800, 
+      heightCrop : 250,
+      canvas : null,
+      clipPath:null,
+      main_image: null,
+
     }
   },
   mounted(){
-    const imagen = document.querySelector('img')
-    this.resizeableImage(imagen)
-    this.saveEvenetState()
+    
+    this.canvas = new fabric.Canvas('canvas'); 
+    this.renderCanvas()
   },
 
   methods:{
 
-    imageTemplate(){
-      return(
-        `<div class="resize-container">
-          <span class="resize-handle resize-handle-nw" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-n" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-ne" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-s" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-se" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-e" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-sw" @mousedown="startResize" ></span>
-          <span class="resize-handle resize-handle-w" @mousedown="startResize" ></span>
-        </div>`
-      )
+    renderCanvas () {
+      this.clipPath = new fabric.Rect({
+      width: this.widthCrop,
+      height: this.heightCrop,
+      fill:'transparent',
+      opacity: 1,
+      strokeWidth:1,
+      stroke:'red',
+      selectable: false,
+      lockMovementX : true,
+      lockMovementY : true
+    }); 
+
+      this.canvas.centerObject(this.clipPath)
+      this.canvas.add(this.clipPath)
     },
     
-    resizeableImage (image_target) {
-      let container
-      const overlay = document.querySelector('a')
+    uploadImage(e) {
+      if(this.main_image){
+        this.canvas.remove(this.main_image)
+        this.canvas.remove(this.clipPath)
+        this.canvas.add(this.clipPath)
+      }
 
-      this.orig_src = new Image(),
-      this.constrain = false,
-      this.min_width = 60, // Change as required
-      this.min_height = 60,
-      this.max_width = 800, // Change as required
-      this.max_height = 900,
-      this.resize_canvas = document.createElement('canvas');
+        var reader = new FileReader();
+        self = this
+        reader.onload = function (f) {
+          let imObj = new Image()
+          imObj.src = f.target.result;
+          imObj.onload = function() {
+            const imgFabri = new fabric.Image(imObj)
+            self.main_image = imgFabri
+            self.main_image.set({
+              transparentCorners: false,
+              cornerColor: 'red',
+              cornerStrokeColor: 'red',
+              borderColor: 'red',
+              cornerSize: 12,
+              padding: 10,
+              cornerStyle: 'circle',
+              borderDashArray: [3, 3]
+            });
+            self.canvas.centerObject(self.main_image)
+            self.main_image.set({globalCompositeOperation: 'destination-over'});
+            self.canvas.add(self.main_image)
+          }
+        }
+        reader.readAsDataURL(e.target.files[0])
       
-
-      const HTMLString = this.imageTemplate()
-      const html = document.implementation.createHTMLDocument()
-      html.body.innerHTML = HTMLString
-      let parent = html.body.children[0]
-      parent.children[2].before(image_target)
-      console.log(parent)
-      overlay.before(parent)
-    },
-    
-    startResize(e){
-      e.preventDefault();
-      e.stopPropagation()
-      document.onmousemove(resizing()) 
-      document.onmouseup(endResize())
     },
 
-    endtResize(e){
-      e.preventDefault();
-      //document.onmousemove(resizing()) 
-      //document.onmouseup(endResize())
-    },
+    crop(){
 
-    saveEvenetState(e){
-      console.log(parent)
+      if (this.canvas.getActiveObject()){
+        let ctx = this.canvas.getContext('2d')
+        let object = this.canvas.getActiveObject()  
+        let img = document.createElement('img')
+        img.src = object.toDataURL("image/png")
+
+
+        const xstart = this.clipPath.aCoords.bl.x - object.aCoords.bl.x
+        const ystart = this.clipPath.aCoords.tl.y - object.aCoords.tl.y
+        const width = this.clipPath.aCoords.br.x - this.clipPath.aCoords.bl.x
+        const height = this.clipPath.aCoords.bl.y- this.clipPath.aCoords.tl.y
+        const x = this.clipPath.left
+        const y = this.clipPath.top
+
+        console.log('stop')
+        let newImg = new Image();
+        newImg.src = img.src;
+        
+        newImg.onload = function () {
+          ctx.drawImage(img,xstart,ystart,width,height,x,y,width,height)
+        }
+        this.canvas.remove(this.main_image)
+        this.canvas.remove(this.clipPath)
+        
+        //saveCanvasToImage()
+
+      }else{
+        alert('seleccione la imagen')
+      }
+    },
+    saveCanvasToImage() {
+      let canvasNode = document.querySelectorAll('canvas')
+      canvasNode.width = img.width
+      canvasNode.height = img.height
+      const canvasImg = document.createElement('img')
+      var dataURL = canvasNode[0].toDataURL();
+      canvasImg.src = dataURL;
+
+      document.body.appendChild(canvasImg)
     }
   }
 }
@@ -107,172 +150,10 @@ export default {
   color: #2c3e50;
   margin-top: 60px;
 }
-.component {
-	position: relative;
-	background: url(./assets/img/gridme.png) repeat center center;
-	padding: 4em;
-	height: 500px;
-	border: 3px solid #49708A;
-	max-width: 901px;
-	overflow: hidden;
-	margin: 0 auto;
+
+#canvas{
+	border: 1px solid black
 }
 
-.resize-container {
-    position: relative;
-    display: inline-block;
-    cursor: move;
-    margin: 0 auto;
-}
-
-.resize-container img {
-    display: block
-}
-
-.resize-container:hover img,
-.resize-container:active img {
-    outline: 2px dashed rgba(222,60,80,.9);
-}
-
-.resize-handle-n,
-.resize-handle-s,
-.resize-handle-e,
-.resize-handle-w,
-.resize-handle-ne,
-.resize-handle-se,
-.resize-handle-nw,
-.resize-handle-sw {
-    position: absolute;
-    display: block;
-    width: 10px;
-    height: 10px;
-    background: rgba(222,60,80,.9);
-    z-index: 999;
-}
-
-.resize-handle-nw {
-    top: -5px;
-    left: -5px;
-    cursor: nw-resize;
-}
-
-.resize-handle-sw {
-    bottom: -5px;
-    left: -5px;
-    cursor: sw-resize;
-}
-
-.resize-handle-ne {
-    top: -5px;
-    right: -5px;
-    cursor: ne-resize;
-}
-
-.resize-handle-se {
-    bottom: -5px;
-    right: -5px;
-    cursor: se-resize;
-}
-.resize-handle-n {
-    top: -5px;
-    left: 300px;
-    cursor: nw-resize;
-}
-
-.resize-handle-s {
-    bottom: -5px;
-    left: 300px;
-    cursor: sw-resize;
-}
-
-.resize-handle-e {
-    top: 190px;
-    right: -5px;
-    cursor: ne-resize;
-}
-
-.resize-handle-w {
-    top: 190px;
-    left: -5px;
-    cursor: se-resize;
-}
-
-.overlay {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	margin-left: -100px;
-	margin-top: -100px;
-	z-index: 999;
-	width: 200px;
-	height: 200px;
-    border: solid 2px rgba(222,60,80,.9);
-	box-sizing: content-box;
-	pointer-events: none;
-}
-
-.overlay:after,
-.overlay:before {
-	content: '';
-	position: absolute;
-	display: block;
-	width: 204px;
-	height: 40px;
-    border-left: dashed 2px rgba(222,60,80,.9);
-	border-right: dashed 2px rgba(222,60,80,.9);
-}
-
-.overlay:before {
-	top: 0;
-	margin-left: -2px;
-	margin-top: -40px;
-}
-
-.overlay:after {
-	bottom: 0;
-	margin-left: -2px;
-	margin-bottom: -40px;
-}
-
-.overlay-inner:after,
-.overlay-inner:before {
-	content: '';
-	position: absolute;
-	display: block;
-	width: 40px;
-	height: 204px;
-    border-top: dashed 2px rgba(222,60,80,.9);
-	border-bottom: dashed 2px rgba(222,60,80,.9);
-}
-
-.overlay-inner:before {
-	left: 0;
-	margin-left: -40px;
-	margin-top: -2px;
-}
-
-.overlay-inner:after{
-	right: 0;
-	margin-right: -40px;
-	margin-top: -2px;
-}
-
-.btn-crop {
-	position: absolute;
-	vertical-align: bottom;
-	right: 5px;
-	bottom: 5px;
-	padding: 6px 10px;
-	z-index: 999;
-	background-color: rgb(222,60,80);
-	border: none;
-	border-radius: 5px;
-	color: #FFF;
-}
-
-.btn-crop img {
-	vertical-align: middle;
-	margin-left: 8px;
-}
 
 </style>
