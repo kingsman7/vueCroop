@@ -3,18 +3,20 @@
 	  <div class="container">
       <div class="columns">
         <div class="column">
-          hola
+
         </div>
-          <div class="column is-one-quarter">
-            <canvas id="canvas" :width=c_width :height=c_height></canvas>
-            <button @click="crop" class="btn-crop js-crop">Crop<img class="icon-crop" src="./assets/img/crop.svg"></button>
-            <input @change="uploadImage" class="btn-primary  btn-upload js-crop" type="file" id="fileUpload2" accept="image/*" />
+          <div class="column">
+          <p>Tamaño del Contenedor {{widthCrop}} x {{heightCrop}}</p> <br>
+          <p v-if="main_image">Imagen original {{main_image.width}} x {{main_image.height}}</p> <br>
+            <canvas id="canvas" :width=c_width :height=c_height></canvas> <br>
+            <input @change="uploadImage" class="button is-primary" type="file" id="fileUpload2" accept="image/*"/>
+            <button @click="crop" class="button is-primary">Crop <img class="icon-crop" src="./assets/img/crop.svg"></button>
           </div>
-        <div class="column">
-          ke ases
-        </div>
+        <div class="column"></div>
+
       </div>
 		</div>
+  <br>
   </div>
 </template>
 
@@ -25,10 +27,10 @@ export default {
   name: 'app',
   data () {
     return {
+      c_width:800,
       c_height:500,
-      c_width:900,
-      widthCrop : 800, 
-      heightCrop : 250,
+      widthCrop : 1600, 
+      heightCrop : 600,
       canvas : null,
       clipPath:null,
       main_image: null,
@@ -36,7 +38,6 @@ export default {
     }
   },
   mounted(){
-    
     this.canvas = new fabric.Canvas('canvas'); 
     this.renderCanvas()
   },
@@ -55,9 +56,15 @@ export default {
       lockMovementX : true,
       lockMovementY : true
     }); 
-
-      this.canvas.centerObject(this.clipPath)
-      this.canvas.add(this.clipPath)
+      if(this.clipPath.width >= this.canvas.width){
+        this.canvas.setZoom(this.canvas.getZoom()*0.4)
+        this.clipPath.top = this.canvas.height / 2  
+        this.clipPath.left = this.canvas.width / 2 - this.canvas.width / 4
+        this.canvas.add(this.clipPath)
+      }else{
+        this.canvas.centerObject(this.clipPath)
+        this.canvas.add(this.clipPath)
+      }
     },
     
     uploadImage(e) {
@@ -65,6 +72,7 @@ export default {
         this.canvas.remove(this.main_image)
         this.canvas.remove(this.clipPath)
         this.canvas.add(this.clipPath)
+        this.canvas.renderAndResetBound()
       }
 
         var reader = new FileReader();
@@ -97,6 +105,11 @@ export default {
     crop(){
 
       if (this.canvas.getActiveObject()){
+        if(this.width >= this.canvas.width){
+          this.canvas.setZoom(this.canvas.getZoom()*1)
+          this.canvas.width = this.width
+          this.canvas.height = this.height
+        }
         let ctx = this.canvas.getContext('2d')
         let object = this.canvas.getActiveObject()  
         let img = document.createElement('img')
@@ -110,23 +123,28 @@ export default {
         const x = this.clipPath.left
         const y = this.clipPath.top
 
-        console.log('stop')
         let newImg = new Image();
         newImg.src = img.src;
-        
+        const _this = this
         newImg.onload = function () {
-          ctx.drawImage(img,xstart,ystart,width,height,x,y,width,height)
+          if(_this.clipPath.width >= _this.canvas.width){
+            ctx.drawImage(img,xstart,ystart,width,height,0,0,width,height)
+          }else{
+            ctx.drawImage(img,xstart,ystart,width,height,x,y,width,height)
+          }
         }
         this.canvas.remove(this.main_image)
         this.canvas.remove(this.clipPath)
-        
-        //saveCanvasToImage()
+
+        setTimeout( ()=> {
+          this.saveCanvasToImage(_this.clipPath)
+        },1000)
 
       }else{
         alert('seleccione la imagen')
       }
     },
-    saveCanvasToImage() {
+    saveCanvasToImage(img) {
       let canvasNode = document.querySelectorAll('canvas')
       canvasNode.width = img.width
       canvasNode.height = img.height
@@ -141,6 +159,7 @@ export default {
 </script>
 
 <style lang="scss">
+  @import '../node_modules/bulma/bulma.sass';
 
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
